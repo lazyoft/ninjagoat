@@ -1,6 +1,8 @@
 import * as Rx from "rx";
 import IViewModel from "./IViewModel";
+import {injectable} from "inversify";
 
+@injectable()
 abstract class ObservableViewModel<T> implements IViewModel<T> {
     "force nominal type for IViewModel": T;
 
@@ -13,8 +15,7 @@ abstract class ObservableViewModel<T> implements IViewModel<T> {
                 this.onData(model);
                 this.subject.onNext(undefined);
             },
-            error => this.onError(error),
-            () => this.dispose()
+            error => this.onError(error)
         );
     }
 
@@ -37,6 +38,10 @@ abstract class ObservableViewModel<T> implements IViewModel<T> {
     dispose(): void {
         if (this.subscription) this.subscription.dispose();
         this.subject.onCompleted();
+    }
+
+    private notifyChanged() {
+        this.subject.onNext(undefined);
     }
 }
 

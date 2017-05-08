@@ -1,22 +1,26 @@
 import IViewResolver from "./IViewResolver";
 import View from "./View";
 import IViewModel from "../viewmodels/IViewModel";
-import {inject, injectable} from "inversify";
-import * as Area from "../constants/Area";
+import {inject, injectable, interfaces} from "inversify";
+import * as Area from "../registry/Area";
 
 @injectable()
 class ViewResolver implements IViewResolver {
 
-    constructor( @inject("Views") private views: {[index:string]:any}) {
+    constructor(@inject("Views") private views:{[index:string]:any}) {
     }
 
-    resolve<T extends IViewModel<T>>(area: string, viewmodelId?: string): View<T> {
-        if (area === Area.Index || area === Area.Master)
-            return this.views[area];
+    resolve<T extends IViewModel<T>>(area:string, viewmodelId?:string):interfaces.Newable<View<T>> {
+        area = area[0].toUpperCase() + area.slice(1);
+        let viewsForArea = this.views[area];
+        if (area === Area.Index || area === Area.Master || area === Area.NotFound)
+            return viewsForArea;
+        if (!viewsForArea) return null;
         if (!viewmodelId)
-            return this.views[area].Index || this.views[area][`${area}${Area.Index}`];
+            return viewsForArea.Index || viewsForArea[`${area}${Area.Index}`];
         else
-            return this.views[area][viewmodelId];
+            return viewsForArea[viewmodelId];
     }
 }
+
 export default ViewResolver;

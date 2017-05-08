@@ -1,28 +1,20 @@
-/// <reference path="../typings/browser.d.ts" />
+import "reflect-metadata";
 import expect = require("expect.js");
 import IViewResolver from "../scripts/views/IViewResolver";
 import ViewResolver from "../scripts/views/ViewResolver";
-import IViewModelRegistry from "../scripts/registry/IViewModelRegistry";
-import ViewModelRegistry from "../scripts/registry/ViewModelRegistry";
 import Bar from "./fixtures/views/foo/Bar";
 import FooIndex from "./fixtures/views/foo/FooIndex";
 import RootIndex from "./fixtures/views/Index";
 import MasterView from "./fixtures/views/Master";
-import IndexViewModel from "./fixtures/viewmodels/IndexViewModel";
-import BarViewModel from "./fixtures/viewmodels/BarViewModel";
-import FooIndexViewModel from "./fixtures/viewmodels/FooIndexViewModel";
-import * as Area from "../scripts/constants/Area";
+import * as Area from "../scripts/registry/Area";
+import NotFound from "./fixtures/views/NotFound";
 
 describe("ViewResolver,given a viewmodel identifier", () => {
 
-    let subject: IViewResolver;
-    let registry: IViewModelRegistry;
+    let subject:IViewResolver;
 
     beforeEach(() => {
-        registry = new ViewModelRegistry();
         subject = new ViewResolver(require("./fixtures/views/export"));
-        registry.index(IndexViewModel);
-        registry.add(BarViewModel).add(FooIndexViewModel).forArea("Foo");
     });
 
     context("when it's registered under a specific area", () => {
@@ -30,6 +22,22 @@ describe("ViewResolver,given a viewmodel identifier", () => {
             let view = subject.resolve<any>("Foo", "Bar");
 
             expect(view).to.be(Bar);
+        });
+
+        context("and the area is lowercase", () => {
+            it("should return the correct view", () => {
+                let view = subject.resolve<any>("tools", "Bar");
+
+                expect(view).to.be(Bar);
+            })
+        });
+    });
+
+    context("when a view that is not registered needs to be resolved", () => {
+        it("should return a null result", () => {
+            let view = subject.resolve<any>("Inexistent");
+
+            expect(view).to.be(null);
         });
     });
 
@@ -54,6 +62,14 @@ describe("ViewResolver,given a viewmodel identifier", () => {
             let view = subject.resolve<any>(Area.Master);
 
             expect(view).to.be(MasterView);
+        });
+    });
+
+    context("when a page is not found", () => {
+        it("should the not found view", () => {
+            let view = subject.resolve<any>(Area.NotFound);
+
+            expect(view).to.be(NotFound);
         });
     });
 });

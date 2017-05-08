@@ -1,5 +1,6 @@
-/// <reference path="../typings/browser.d.ts" />
+import "reflect-metadata";
 import expect = require("expect.js");
+import {IMock, Mock, It, Times} from "typemoq";
 import ViewModelRegistry from "../scripts/registry/ViewModelRegistry";
 import IViewModelRegistry from "../scripts/registry/IViewModelRegistry";
 import IUriResolver from "../scripts/navigation/IUriResolver";
@@ -8,7 +9,7 @@ import BarViewModel from "./fixtures/viewmodels/BarViewModel";
 import FooIndexViewModel from "./fixtures/viewmodels/FooIndexViewModel";
 import IndexViewModel from "./fixtures/viewmodels/IndexViewModel";
 import RootViewModel from "./fixtures/viewmodels/RootViewModel";
-import * as Area from "../scripts/constants/Area";
+import * as Area from "../scripts/registry/Area";
 
 describe("UriResolver, given an URI", () => {
 
@@ -31,6 +32,15 @@ describe("UriResolver, given an URI", () => {
 
             expect(resource.viewmodel.id).to.be("Bar");
         });
+
+        context("and the viewmodel has been registered in a lower case area", () => {
+            it("should return the correct area identifier", () => {
+                registry.add(BarViewModel).forArea("tools");
+                let resource = subject.resolve("/tools/bar");
+
+                expect(resource.area).to.be("tools");
+            });
+        });
     });
 
     context("when it contains some parameters", () => {
@@ -50,15 +60,21 @@ describe("UriResolver, given an URI", () => {
 
     context("when it's the root of an area", () => {
         context("and there is a specific Index viewmodel associated", () => {
-
-            beforeEach(() => {
-                registry.add(FooIndexViewModel).forArea("Foo");
-            });
-
             it("should return the viewmodel identifier composed by the name of the area plus Index", () => {
+                registry.add(FooIndexViewModel).forArea("Foo");
                 let resource = subject.resolve("/foo");
 
                 expect(resource.viewmodel.id).to.be("FooIndex");
+            });
+        });
+
+        context("and this area needs some parameters", () => {
+            it("should correctly resolve the viewmodel", () => {
+                registry.add(FooIndexViewModel, _ => null, ":id").forArea("Foo");
+                let resource = subject.resolve("/foo/25");
+
+                expect(resource.viewmodel.id).to.be("FooIndex");
+                expect(resource.viewmodel.parameters).to.be(":id");
             });
         });
 
@@ -122,6 +138,47 @@ describe("UriResolver, given an URI", () => {
             let resource = subject.resolve("/foo?id=20");
 
             expect(resource.viewmodel.id).to.be("FooIndex");
+        });
+    });
+
+    context("when it's a page that does not exists", () => {
+        beforeEach(() => registry.notFound(RootViewModel));
+        it("should return the 404 handler", () => {
+            let resource = subject.resolve("/inexistent");
+
+            expect(resource.area).to.be(Area.NotFound);
+            expect(resource.viewmodel.id).to.be("Root");
+        });
+
+        context("and it contains a viewmodel identifier", () => {
+            it("should return the 404 handler", () => {
+                let resource = subject.resolve("/inexistent/testViewmodel");
+
+                expect(resource.area).to.be(Area.NotFound);
+                expect(resource.viewmodel.id).to.be("Root");
+            });
+        });
+
+        context("and it's resolved using the special NotFound identifier", () => {
+            it("should return the 404 handler", () => {
+                let resource = subject.resolve(Area.NotFound);
+
+                expect(resource.area).to.be(Area.NotFound);
+                expect(resource.viewmodel.id).to.be("Root");
+            });
+        });
+
+        context("but it contains a registered area", () => {
+            beforeEach(() => {
+                registry.add(BarViewModel).forArea("Admin");
+            });
+
+            it("should return the 404 handler", () => {
+                let resource = subject.resolve("/admin/inexistent");
+
+                expect(resource.area).to.be(Area.NotFound);
+                expect(resource.viewmodel.id).to.be("Root");
+            });
         });
     });
 });
